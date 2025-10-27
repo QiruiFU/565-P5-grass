@@ -70,5 +70,48 @@ void main() {
 	// You want to write the visible blades to the buffer without write conflicts between threads
     
     Blade blade = blades[gl_GlobalInvocationID.x];
+
+    // --- 参数 ---
+    const float g = 5.0;
+    const float wind = 3.0;
+    const float wind_freq = 1.5;
+
+    vec3 v0 = blade.v0.xyz;
+    vec3 v1 = blade.v1.xyz;
+    vec3 v2 = blade.v2.xyz;
+    vec3 up = blade.up.xyz;
+    float orientation = blade.v0.w;
+    float height = blade.v1.w;
+    float stiffness = blade.up.w;
+
+    vec3 t1 = normalize(vec3(-cos(orientation), 0.0, sin(orientation)));
+    vec3 f = normalize(cross(t1, up));
+    vec3 g_total = vec3(0.0, -g, 0.0) + 0.25 * g * f;
+
+    vec3 iv2 = v0 + height * up;
+    vec3 re = (iv2 - v2) * stiffness;
+
+    vec3 windDir = wind * vec3(cos(wind_freq * v0.x * totalTime), 0.0, sin(wind_freq * v0.z * totalTime));
+    float fd = 1.0 - abs(dot(normalize(windDir), normalize(v2 - v0)));
+    float fr = dot(v2 - v0, up) / height;
+    vec3 w = windDir * (fd * fr);
+
+    v2 += (g_total + re + w) * deltaTime;
+    v2 -= up * min(dot(up, v2 - v0), 0.0);
+
+    float lproj = length(v2 - v0 - up * dot(v2 - v0, up));
+    v1 = v0 + height * up * max(1.0 - lproj / height, 0.05 * max(lproj / height, 1.0));
+
+    float L0 = distance(v0, v2);
+    float L1 = distance(v0, v1) + distance(v1, v2);
+    float r = height / ((2.0 * L0 + L1) / 3.0);
+
+    v1 = v0 + r * (v1 - v0);
+    v2 = v1 + r * (v2 - v1);
+
+    blade.v1.xyz = v1;
+    blade.v2.xyz = v2;
+
+    blades[gl_GlobalInvocationID.x] = blade;
     culledBlades[atomicAdd(bladeInfo.vertexCount, 1)] = blade;
 }

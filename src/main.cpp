@@ -143,8 +143,40 @@ int main() {
     glfwSetMouseButtonCallback(GetGLFWWindow(), mouseDownCallback);
     glfwSetCursorPosCallback(GetGLFWWindow(), mouseMoveCallback);
 
+
+    // The code for printing fps is from :
+    // https://github.com/TianhongZhou/Project5-Vulkan-Grass-Rendering/blob/main/src/main.cpp
+
+    double lastTitleUpdate = glfwGetTime();
+    double lastFrameTime = lastTitleUpdate;
+    int    frames = 0;
+    double smoothMs = -1.0;
+
     while (!ShouldQuit()) {
         glfwPollEvents();
+
+        double now = glfwGetTime();
+        double dt = now - lastFrameTime;  
+        lastFrameTime = now;
+        frames++;
+
+        double ms = dt * 1000.0;
+        smoothMs = (smoothMs < 0.0) ? ms : (0.9 * smoothMs + 0.1 * ms);
+
+        if (now - lastTitleUpdate >= 1.0) {
+            double sec = now - lastTitleUpdate;
+            double fps = frames / sec;
+
+            char title[160];
+            std::snprintf(title, sizeof(title),
+                "%s %.1f FPS (%.2f ms)",
+                applicationName, fps, smoothMs);
+            glfwSetWindowTitle(GetGLFWWindow(), title);
+
+            frames = 0;
+            lastTitleUpdate = now;
+        }
+
         scene->UpdateTime();
         renderer->Frame();
     }
