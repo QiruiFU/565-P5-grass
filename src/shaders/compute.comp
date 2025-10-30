@@ -72,8 +72,8 @@ void main() {
     Blade blade = blades[gl_GlobalInvocationID.x];
 
     const float g = 5.0;
-    const float wind = 3.0;
-    const float wind_freq = 1.5;
+    const float wind = 1.0;
+    const float wind_freq = 1.0;
 
     const float orientation = 0.4;
     const int bucket = 5;
@@ -133,7 +133,7 @@ void main() {
         return;
     }
 
-    // camera
+    // orientation
     vec3 camPos = inverse(camera.view)[3].xyz;
     vec3 camToBlade = v0 - camPos;
     vec3 viewDir = camToBlade - up * dot(camToBlade, up);
