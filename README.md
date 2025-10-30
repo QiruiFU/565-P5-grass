@@ -9,6 +9,10 @@ Vulkan Grass Rendering
 
 ### README
 
+<img src="/img/screenshot.png">
+
+<img src="/img/screen-gif.gif">
+
 ### Description
 
 In this project, I implement a tool to render and simulate behaviours of grasses in Vulkan. There are three parts in this project: rendering, simulating forces and culling. The grass blades are represented by Bezier curves and all forces are considered on three control points for blades. Furthermore, we can optimize the performance using some culling techniques.
