@@ -71,26 +71,32 @@ void main() {
     
     Blade blade = blades[gl_GlobalInvocationID.x];
 
-    // --- 参数 ---
     const float g = 5.0;
     const float wind = 3.0;
     const float wind_freq = 1.5;
+
+    const float orientation = 0.4;
+    const int bucket = 5;
+    const float max_dis = 15.0;
 
     vec3 v0 = blade.v0.xyz;
     vec3 v1 = blade.v1.xyz;
     vec3 v2 = blade.v2.xyz;
     vec3 up = blade.up.xyz;
-    float orientation = blade.v0.w;
+    float blade_orient = blade.v0.w;
     float height = blade.v1.w;
     float stiffness = blade.up.w;
 
-    vec3 t1 = normalize(vec3(-cos(orientation), 0.0, sin(orientation)));
+    // gravity
+    vec3 t1 = normalize(vec3(-cos(blade_orient), 0.0, sin(blade_orient)));
     vec3 f = normalize(cross(t1, up));
     vec3 g_total = vec3(0.0, -g, 0.0) + 0.25 * g * f;
 
+    // stiffness
     vec3 iv2 = v0 + height * up;
     vec3 re = (iv2 - v2) * stiffness;
 
+    // wind
     vec3 windDir = wind * vec3(cos(wind_freq * v0.x * totalTime), 0.0, sin(wind_freq * v0.z * totalTime));
     float fd = 1.0 - abs(dot(normalize(windDir), normalize(v2 - v0)));
     float fr = dot(v2 - v0, up) / height;
@@ -113,5 +119,35 @@ void main() {
     blade.v2.xyz = v2;
 
     blades[gl_GlobalInvocationID.x] = blade;
+    
+    // frustum
+    vec4 ccs_v0 = camera.proj * camera.view * vec4(v0, 1.0);
+    vec4 ccs_v2 = camera.proj * camera.view * vec4(v2, 1.0);
+    vec4 ccs_m  = camera.proj * camera.view * vec4((1.0/4.0)*v0 + (1.0/2.0)*v1 + (1.0/4.0)*v2, 1.0);
+
+    bool v0_in = abs(ccs_v0.x) <= ccs_v0.w && abs(ccs_v0.y) <= ccs_v0.w && abs(ccs_v0.z) <= ccs_v0.w;
+    bool v2_in = abs(ccs_v2.x) <= ccs_v2.w && abs(ccs_v2.y) <= ccs_v2.w && abs(ccs_v2.z) <= ccs_v2.w;
+    bool m_in  = abs(ccs_m.x)  <= ccs_m.w  && abs(ccs_m.y)  <= ccs_m.w  && abs(ccs_m.z)  <= ccs_m.w;
+
+    if (!v0_in && !v2_in && !m_in) {
+        return;
+    }
+
+    // camera
+    vec3 camPos = inverse(camera.view)[3].xyz;
+    vec3 camToBlade = v0 - camPos;
+    vec3 viewDir = camToBlade - up * dot(camToBlade, up);
+
+    float angle = abs(dot(normalize(viewDir), t1));
+    if (angle < orientation) {
+        return;
+    }
+
+    // distance
+    float dproj = length(viewDir);
+    if ((gl_GlobalInvocationID.x % bucket) < int(floor(bucket * (1.0 - dproj / max_dis)))) {
+        return;
+    }
+
     culledBlades[atomicAdd(bladeInfo.vertexCount, 1)] = blade;
 }
